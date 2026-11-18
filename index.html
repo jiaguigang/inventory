@@ -157,7 +157,7 @@ const nowKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMont
 const tot=i=>(+i.qty||0)*(+i.cost||0);
 const SB_URL='https://omtnacujgcfrgejkcyvy.supabase.co',SB_KEY='sb_publishable_UgmONJ6n5w1vippfobkhQA_yCCQJOTq';/* ← 填入 Supabase 的 Project URL 與 anon public key */
 const STAFF=location.hash==='#staff';
-let S={items:[],hist:{},log:{}},tab='count',q='',fl='全部',fc='全部',cur=nowKey(),fq=STAFF?'due':'all',sf='all',oq='all',os='',pf='all',ps='';
+let S={items:[],hist:{},log:{}},tab='count',q='',fl='全部',fc='全部',cur=nowKey(),fq=STAFF?'due':'all',sf='all',aid=null,oq='all',os='',pf='all',ps='';
 function sums(){const r={f:0,p:0,c:0,t:0,loc:{}};S.items.forEach(i=>{const v=tot(i);r[i.cat]=(r[i.cat]||0)+v;r.t+=v;r.loc[i.loc]=(r.loc[i.loc]||0)+v});return r}
 function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;clearTimeout(e._t);e._t=setTimeout(()=>e.style.opacity=0,1800)}
 const today=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -190,16 +190,16 @@ async function init(){
 function header(){const s=sums();$('#hd').innerHTML=`<img class="logo" src="${LOGO}" alt=""><h1>${lab(cur)} 呷歸岡${STAFF?'現場盤點表':'庫存成本'}</h1><div class="big">${money(s.t)}</div><div class="mini">${cats().map(k=>`<span><i style="background:${col(k)}"></i>${esc(catName(k))} ${money(s[k]||0)}</span>`).join('')}</div>`}
 function tabs(){const T=[['count','📋','盤點'],['sheet','📑','庫存表'],['order','📦','叫貨'],['stats','📊','統計'],['items','🧺','品項'],['more','⚙️','更多']].filter(t=>!STAFF||['count','sheet','order','stats'].includes(t[0]));$('#tb').innerHTML=T.map(t=>`<button class="${tab===t[0]||(tab==='price'&&t[0]==='more')?'on':''}" data-t="${t[0]}"><b>${t[1]}</b>${t[2]}</button>`).join('')}
 function rows(){
- const a=S.items.filter(i=>(fq==='all'||!done(i))&&(fl==='全部'||i.loc===fl)&&(fc==='全部'||i.cat===fc)&&(!q||i.name.includes(q)||(i.supplier||'').includes(q)));
- if(!a.length)return '<div class="empty">'+(fq==='due'&&!q?'🎉 都盤完了':'沒有符合的品項')+'</div>';
- const R=i=>`<div class="row ${done(i)?'ok':''}" data-id="${i.id}"><div class="nm" ${STAFF?'':'data-a="e"'}><b>${esc(i.name)}</b><small>${i.freq==='d'?'每日 · ':i.freq==='w'?'每週 · ':''}${esc(i.loc)} · ${m1(i.cost)}/${esc(i.unit)}${i.supplier?' · '+esc(i.supplier):''}${i.note?' · '+esc(i.note):''}</small></div><div class="st"><button data-a="m">−</button><input type="number" inputmode="decimal" step="any" value="${i.qty||''}" placeholder="0"><button data-a="p">+</button></div><div class="rt">${STAFF?'<button class="okb" data-a="ok">✓</button>':money(tot(i))}</div>${STAFF?'':'<button class="okb" data-a="ok">✓</button>'}</div>`;
+ const a=S.items.filter(i=>(fq==='all'||(fq==='done'?done(i):!done(i)))&&(fl==='全部'||i.loc===fl)&&(fc==='全部'||i.cat===fc)&&(!q||i.name.includes(q)||(i.supplier||'').includes(q)));
+ if(!a.length)return '<div class="empty">'+(fq==='due'&&!q?'🎉 都盤完了':fq==='done'&&!q?'還沒有盤過的品項':'沒有符合的品項')+'</div>';
+ const R=i=>`<div class="row ${done(i)?'ok':''}" data-id="${i.id}"><div class="nm" ${STAFF?'':'data-a="e"'}><b>${esc(i.name)}</b><small>${i.freq==='d'?'每日 · ':i.freq==='w'?'每週 · ':''}${esc(i.loc)} · ${m1(i.cost)}/${esc(i.unit)}${i.supplier?' · '+esc(i.supplier):''}${i.note?' · '+esc(i.note):''}</small>${done(i)?`<small class="adj" data-a="adj" style="color:var(--ac);font-weight:700;margin-top:3px">✓ 已盤 ${i.qty||0}${esc(i.unit)}　＋ 再加／減數量</small>`:''}</div><div class="st"><button data-a="m">−</button><input type="number" inputmode="decimal" step="any" value="${i.qty||''}" placeholder="0"><button data-a="p">+</button></div><div class="rt">${STAFF?'<button class="okb" data-a="ok">✓</button>':money(tot(i))}</div>${STAFF?'':'<button class="okb" data-a="ok">✓</button>'}</div>`;
  return fc==='全部'?cats().map(k=>{const g=a.filter(i=>i.cat===k);return g.length?`<div class="gh"><i style="background:${col(k)}"></i>${esc(catName(k))}（${g.length}）</div>`+g.map(R).join(''):''}).join(''):a.map(R).join('')}
 function vCount(){
  if(!S.items.length)return STAFF?'<div class="empty">尚無品項<br><br><button class="btn" data-a="new">＋ 新增品項</button></div>':`<div class="empty">還沒有品項<br><br><button class="btn" data-a="seed">匯入我的品項與歷史月份</button><button class="btn alt" data-a="new">自己新增品項</button></div>`;
  const L=['全部',...LOCS.filter(l=>S.items.some(i=>i.loc===l)),...[...new Set(S.items.map(i=>i.loc))].filter(l=>!LOCS.includes(l))];
- const cnt=k=>S.items.filter(i=>(fq==='all'||!done(i))&&(fl==='全部'||i.loc===fl)&&(k==='全部'||i.cat===k)).length;
- return `<button class="btn alt" data-a="new" style="padding:9px;margin:4px 0 8px">＋ 新增品項</button><div class="seg">${['全部',...cats()].map(k=>`<button class="${fc===k?'on':''}" data-a="fc" data-v="${esc(k)}">${k==='全部'?'全部類別':esc(catName(k))}<small>${fq==='due'?'待盤 ':''}${cnt(k)} 項</small></button>`).join('')}</div>
- <div class="chips">${[['due','待盤 '+S.items.filter(i=>!done(i)).length],['all','全部 '+S.items.length]].map(([k,t])=>`<button class="chip ${fq===k?'on':''}" data-a="fq" data-v="${k}">${t}</button>`).join('')}</div><div class="chips">${L.map(l=>`<button class="chip ${fl===l?'on':''}" data-a="fl" data-v="${esc(l)}">${esc(l)}</button>`).join('')}</div>
+ const cnt=k=>S.items.filter(i=>(fq==='all'||(fq==='done'?done(i):!done(i)))&&(fl==='全部'||i.loc===fl)&&(k==='全部'||i.cat===k)).length;
+ return `<button class="btn alt" data-a="new" style="padding:9px;margin:4px 0 8px">＋ 新增品項</button><div class="seg">${['全部',...cats()].map(k=>`<button class="${fc===k?'on':''}" data-a="fc" data-v="${esc(k)}">${k==='全部'?'全部類別':esc(catName(k))}<small>${fq==='due'?'待盤 ':fq==='done'?'已盤 ':''}${cnt(k)} 項</small></button>`).join('')}</div>
+ <div class="chips">${[['due','待盤 '+S.items.filter(i=>!done(i)).length],['done','已盤 '+S.items.filter(done).length],['all','全部 '+S.items.length]].map(([k,t])=>`<button class="chip ${fq===k?'on':''}" data-a="fq" data-v="${k}">${t}</button>`).join('')}</div><div class="chips">${L.map(l=>`<button class="chip ${fl===l?'on':''}" data-a="fl" data-v="${esc(l)}">${esc(l)}</button>`).join('')}</div>
  <input id="q" placeholder="搜尋品項…" value="${esc(q)}" style="margin-bottom:9px"><div id="list">${rows()}</div>`}
 function bar(l,v,t,c){return `<div class="bar"><div><span>${l}</span><span>${money(v)}${t?` · ${Math.round(v/t*100)}%`:''}</span></div><div class="tr"><i style="width:${t?v/t*100:0}%;background:${c}"></i></div></div>`}
 function usageCard(){const us=S.items.map(i=>{const l=S.log[i.id]||[];if(l.length<2)return null;const a=l[l.length-2],b=l[l.length-1];return{i,a,b,d:a.q-b.q}}).filter(Boolean).sort((x,y)=>Math.abs(y.d*y.i.cost)-Math.abs(x.d*x.i.cost)).slice(0,15);
@@ -323,6 +323,8 @@ document.addEventListener('click',e=>{
  else if(a==='pull')pull(true);
  else if(a==='seed')seed();
  else if(a==='csv')csv();
+ else if(a==='adj'){const i=S.items.find(x=>x.id===row.dataset.id);aid=i.id;$('#md').innerHTML=`<div class="sheet"><h2 style="margin:0 0 4px">${esc(i.name)}</h2><div style="color:var(--mu);margin-bottom:10px">目前已盤 <b id="acur">${i.qty||0}</b> ${esc(i.unit)}。又找到一批，或要扣掉，輸入這次的數量：</div><input id="aq" type="number" inputmode="decimal" step="any" placeholder="這次數量" style="width:100%;font-size:20px;text-align:center"><div id="apv" style="text-align:center;color:var(--mu);margin:8px 0;min-height:20px"></div><div class="two"><button class="btn" data-a="aadd">＋ 加入</button><button class="btn red" data-a="asub">− 扣除</button></div><button class="btn alt" data-a="ec">取消</button></div>`;$('#md').classList.add('on');setTimeout(()=>$('#aq').focus(),50)}
+ else if(a==='aadd'||a==='asub'){const i=S.items.find(x=>x.id===aid),v=+$('#aq').value;if(!i||!v||v<0){toast('請輸入大於 0 的數量');return}i.qty=Math.max(0,Math.round((i.qty+(a==='aadd'?v:-v))*100)/100);markDone(i);saveQty(i);$('#md').classList.remove('on');toast(i.name+' 合計 '+i.qty+i.unit);render()}
  else if(a==='ec')$('#md').classList.remove('on');
  else if(a==='es'){const id=el.dataset.id,n=$('#e_n').value.trim();if(!n){toast('請輸入名稱');return}
   let cat=$('#e_c').value,loc=$('#e_l').value;if(cat==='__new'){const t=$('#e_cn').value.trim();if(!t){toast('請輸入新類別名稱');return}cat=Object.keys(CATS).find(k=>CATS[k]===t)||t}if(loc==='__new'){loc=$('#e_ln').value.trim();if(!loc){toast('請輸入新位置名稱');return}}
@@ -337,6 +339,7 @@ document.addEventListener('input',e=>{
  if(e.target.id==='q'){q=e.target.value.trim();$('#list').innerHTML=rows()}
  else if(e.target.closest('.st2')){const row=e.target.closest('.row'),i=S.items.find(x=>x.id===row.dataset.id);i.qty=+e.target.value||0;i.chk=today();chkAfter(row,i)}
  else if(e.target.classList.contains('pin')){const row=e.target.closest('.row'),i=S.items.find(x=>x.id===row.dataset.id);i.cost=+e.target.value||0;row.querySelector('.rt').innerHTML=diffTag(i);header();savePrice(i)}
+ else if(e.target.id==='aq'){const i=S.items.find(x=>x.id===aid),v=+e.target.value||0;$('#apv').textContent=v?`加入後 ${Math.round((i.qty+v)*100)/100}　／　扣除後 ${Math.max(0,Math.round((i.qty-v)*100)/100)}`:''}
  else if(e.target.id==='ps'){ps=e.target.value.trim();$('#plist').innerHTML=priceList()}
  else if(e.target.id==='os'){os=e.target.value.trim();$('#olist').innerHTML=ordList()}
  else if(e.target.closest('.st')){const row=e.target.closest('.row');const i=S.items.find(x=>x.id===row.dataset.id);i.qty=+e.target.value||0;upd(row)}
