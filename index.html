@@ -178,7 +178,7 @@ async function init(){
  setInterval(()=>{if(!document.hidden)pull()},15000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
 }
-function header(){const s=sums();$('#hd').innerHTML=`<img class="logo" src="${LOGO}" alt=""><h1>${lab(cur)} 庫存總成本</h1><div class="big">${money(s.t)}</div><div class="mini">${Object.keys(CATS).map(k=>`<span><i style="background:${COL[k]}"></i>${CATS[k]} ${money(s[k])}</span>`).join('')}</div>`}
+function header(){const s=sums();$('#hd').innerHTML=`<img class="logo" src="${LOGO}" alt=""><h1>${lab(cur)} 呷歸岡庫存成本</h1><div class="big">${money(s.t)}</div><div class="mini">${Object.keys(CATS).map(k=>`<span><i style="background:${COL[k]}"></i>${CATS[k]} ${money(s[k])}</span>`).join('')}</div>`}
 function tabs(){const T=[['count','📋','盤點'],['stats','📊','統計'],['items','🧺','品項'],['more','⚙️','更多']].filter(t=>!STAFF||t[0]==='count'||t[0]==='stats');$('#tb').innerHTML=T.map(t=>`<button class="${tab===t[0]?'on':''}" data-t="${t[0]}"><b>${t[1]}</b>${t[2]}</button>`).join('')}
 function rows(){
  const a=S.items.filter(i=>(fq==='all'||!done(i))&&(fl==='全部'||i.loc===fl)&&(fc==='全部'||i.cat===fc)&&(!q||i.name.includes(q)));
