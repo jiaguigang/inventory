@@ -156,7 +156,7 @@ const done=i=>{const c=i.counted;if(!c)return false;const t=today();if(i.freq===
 function markDone(i){const t=today();i.counted=t;const l=S.log[i.id]=S.log[i.id]||[];const e=l.find(x=>x.d===t);if(e)e.q=i.qty;else l.push({d:t,q:i.qty})}
 const online=()=>SB_URL&&SB_KEY;
 const sb=(path,opt={})=>fetch(SB_URL+'/rest/v1/'+path,{...opt,headers:{apikey:SB_KEY,...(SB_KEY.startsWith('eyJ')?{Authorization:'Bearer '+SB_KEY}:{}),'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal',...opt.headers}}).then(r=>{if(!r.ok)throw r;return r});
-const toRow=(i,k)=>({id:i.id,name:i.name,cat:i.cat,loc:i.loc,unit:i.unit,cost:i.cost,note:i.note||'',qty:i.qty||0,sort:k,freq:i.freq||'m',counted:i.counted||null});
+const toRow=(i,k)=>({id:i.id,name:i.name,cat:i.cat,loc:i.loc,unit:i.unit,cost:i.cost,note:i.note||'',qty:i.qty||0,sort:k,freq:i.freq||'m',counted:i.counted||null,supplier:i.supplier||''});
 const cache=()=>{try{localStorage.setItem('inv',JSON.stringify(S))}catch(e){}};
 const run=async fn=>{if(!online())return;try{await fn()}catch(e){toast('同步失敗，請確認網路')}};
 const qt={};
@@ -168,7 +168,7 @@ const syncReset=()=>{cache();run(()=>sb('inv_items?id=neq.__none__',{method:'PAT
 const syncSeed=()=>{cache();run(async()=>{await sb('inv_items',{method:'POST',body:JSON.stringify(S.items.map((i,k)=>toRow(i,k)))});await sb('inv_hist',{method:'POST',body:JSON.stringify(Object.entries(S.hist).map(([k,d])=>({month:k,data:d})))})})};
 async function pull(m){if(!online()||Object.keys(qt).length)return;try{
  const [a,b,c]=await Promise.all([sb('inv_items?select=*&order=sort.asc').then(r=>r.json()),sb('inv_hist?select=*').then(r=>r.json()),sb('inv_log?select=*&order=day.asc&day=gte.'+today(new Date(Date.now()-90*864e5))).then(r=>r.json())]);
- S.items=a.map(r=>({id:r.id,name:r.name,cat:r.cat,loc:r.loc,unit:r.unit,cost:+r.cost,note:r.note,qty:+r.qty,freq:r.freq||'m',counted:r.counted||null}));
+ S.items=a.map(r=>({id:r.id,name:r.name,cat:r.cat,loc:r.loc,unit:r.unit,cost:+r.cost,note:r.note,qty:+r.qty,freq:r.freq||'m',counted:r.counted||null,supplier:r.supplier||''}));
  S.hist={};b.forEach(r=>S.hist[r.month]=r.data);S.log={};c.forEach(r=>(S.log[r.item_id]=S.log[r.item_id]||[]).push({d:r.day,q:+r.qty}));cache();
  if(!$('#md').classList.contains('on')&&!document.activeElement?.matches?.('input,select'))render();
  if(m)toast('已更新')}catch(e){if(m)toast('讀取失敗，請確認網路與設定')}}
@@ -181,9 +181,9 @@ async function init(){
 function header(){const s=sums();$('#hd').innerHTML=`<img class="logo" src="${LOGO}" alt=""><h1>${lab(cur)} 呷歸岡${STAFF?'現場盤點表':'庫存成本'}</h1><div class="big">${money(s.t)}</div><div class="mini">${Object.keys(CATS).map(k=>`<span><i style="background:${COL[k]}"></i>${CATS[k]} ${money(s[k])}</span>`).join('')}</div>`}
 function tabs(){const T=[['count','📋','盤點'],['stats','📊','統計'],['items','🧺','品項'],['more','⚙️','更多']].filter(t=>!STAFF||t[0]==='count'||t[0]==='stats');$('#tb').innerHTML=T.map(t=>`<button class="${tab===t[0]?'on':''}" data-t="${t[0]}"><b>${t[1]}</b>${t[2]}</button>`).join('')}
 function rows(){
- const a=S.items.filter(i=>(fq==='all'||!done(i))&&(fl==='全部'||i.loc===fl)&&(fc==='全部'||i.cat===fc)&&(!q||i.name.includes(q)));
+ const a=S.items.filter(i=>(fq==='all'||!done(i))&&(fl==='全部'||i.loc===fl)&&(fc==='全部'||i.cat===fc)&&(!q||i.name.includes(q)||(i.supplier||'').includes(q)));
  if(!a.length)return '<div class="empty">'+(fq==='due'&&!q?'🎉 都盤完了':'沒有符合的品項')+'</div>';
- return a.map(i=>`<div class="row ${done(i)?'ok':''}" data-id="${i.id}"><div class="nm" ${STAFF?'':'data-a="e"'}><b>${esc(i.name)}</b><small>${i.freq==='d'?'每日 · ':i.freq==='w'?'每週 · ':''}${esc(i.loc)} · ${m1(i.cost)}/${esc(i.unit)}${i.note?' · '+esc(i.note):''}</small></div><div class="st"><button data-a="m">−</button><input type="number" inputmode="decimal" step="any" value="${i.qty||''}" placeholder="0"><button data-a="p">+</button></div><div class="rt">${STAFF?'<button class="okb" data-a="ok">✓</button>':money(tot(i))}</div></div>`).join('')}
+ return a.map(i=>`<div class="row ${done(i)?'ok':''}" data-id="${i.id}"><div class="nm" ${STAFF?'':'data-a="e"'}><b>${esc(i.name)}</b><small>${i.freq==='d'?'每日 · ':i.freq==='w'?'每週 · ':''}${esc(i.loc)} · ${m1(i.cost)}/${esc(i.unit)}${i.supplier?' · '+esc(i.supplier):''}${i.note?' · '+esc(i.note):''}</small></div><div class="st"><button data-a="m">−</button><input type="number" inputmode="decimal" step="any" value="${i.qty||''}" placeholder="0"><button data-a="p">+</button></div><div class="rt">${STAFF?'<button class="okb" data-a="ok">✓</button>':money(tot(i))}</div></div>`).join('')}
 function vCount(){
  if(!S.items.length)return STAFF?'<div class="empty">尚無品項，請聯絡管理者</div>':`<div class="empty">還沒有品項<br><br><button class="btn" data-a="seed">匯入我的品項與歷史月份</button><button class="btn alt" data-a="new">自己新增品項</button></div>`;
  const L=['全部',...LOCS.filter(l=>S.items.some(i=>i.loc===l)),...[...new Set(S.items.map(i=>i.loc))].filter(l=>!LOCS.includes(l))];
@@ -204,7 +204,7 @@ function vStats(){
  <div class="card"><h2>各區域</h2>${locs.length?locs.map(l=>bar(l[0],l[1],s.t,'var(--ac)')).join(''):'<div class="empty">尚未盤點</div>'}</div>
  <div class="card"><h2>歷月趨勢（食材／包材／清潔）</h2><div class="hist">${all.map(([k,h])=>{const nb=!h.p&&!h.c;const sc=v=>(v/mx*100)+'%';return `<div class="col"><div class="stack" style="${h.live?'opacity:.55':''}"><i style="height:${sc(h.f)};background:${nb?'var(--g)':COL.f}"></i><i style="height:${sc(h.p)};background:${COL.p}"></i><i style="height:${sc(h.c)};background:${COL.c}"></i></div>${(h.t/10000).toFixed(1)}萬<br>${k.slice(2).replace('-','/')}</div>`}).join('')}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">灰色＝當時未分類；半透明＝本月進行中</div></div>
  ${usageCard()}<div class="card"><h2>成本最高的 10 項</h2>${top.length?top.map(i=>bar(i.name,tot(i),s.t,COL[i.cat])).join(''):'<div class="empty">尚未盤點</div>'}</div>`}
-function vItems(){return `<button class="btn" data-a="new">＋ 新增品項</button>`+S.items.map(i=>`<div class="row" data-id="${i.id}" data-a="e"><div class="nm"><b>${esc(i.name)}</b><small>${CATS[i.cat]} · ${esc(i.loc)} · ${m1(i.cost)}/${esc(i.unit)}</small></div><div class="rt">›</div></div>`).join('')}
+function vItems(){return `<button class="btn" data-a="new">＋ 新增品項</button>`+S.items.map(i=>`<div class="row" data-id="${i.id}" data-a="e"><div class="nm"><b>${esc(i.name)}</b><small>${CATS[i.cat]} · ${esc(i.loc)} · ${m1(i.cost)}/${esc(i.unit)}${i.supplier?' · '+esc(i.supplier):''}</small></div><div class="rt">›</div></div>`).join('')}
 function vMore(){const ks=Object.keys(S.hist).sort().reverse();return `<div class="card"><h2>月底作業</h2><div class="f"><label>盤點月份</label><input type="month" id="mm" value="${cur}"></div>
  <button class="btn" data-a="arch">封存這個月的結果</button>
  <button class="btn alt" data-a="rst">清空所有數量（開始下個月盤點）</button></div>
@@ -223,11 +223,12 @@ function edit(id){const i=S.items.find(x=>x.id===id)||{cat:'f',loc:'煎台',unit
  <div><label>位置</label><select id="e_l">${ls.map(l=>`<option ${i.loc===l?'selected':''}>${esc(l)}</option>`).join('')}</select></div></div>
  <div class="two f"><div><label>單位</label><input id="e_u" value="${esc(i.unit)}"></div><div><label>單價（元）</label><input id="e_p" type="number" inputmode="decimal" step="any" value="${i.cost}"></div></div>
  <div class="f"><label>盤點頻率</label><select id="e_q">${[['m','每月'],['w','每週'],['d','每日']].map(([k,t])=>`<option value="${k}" ${(i.freq||'m')===k?'selected':''}>${t}</option>`).join('')}</select></div>
+ <div class="f"><label>進貨廠商</label><input id="e_s" value="${esc(i.supplier||'')}"></div>
  <div class="f"><label>備註（舊食材可把單價設為 0）</label><input id="e_o" value="${esc(i.note||'')}"></div>
  <button class="btn" data-a="es" data-id="${id||''}">儲存</button>${id?`<button class="btn red" data-a="ed" data-id="${id}">刪除品項</button>`:''}<button class="btn alt" data-a="ec">取消</button></div>`;$('#md').classList.add('on')}
 function seed(){let n=0;const have=new Set(S.items.map(i=>i.name));SEED.split('\n').forEach((l,k)=>{const [name,cat,loc,unit,cost]=l.split('|');if(!have.has(name)){S.items.push({id:'s'+k,name,cat,loc,unit,cost:+cost,qty:0});n++}});
  Object.entries(HIST).forEach(([k,v])=>{if(!S.hist[k])S.hist[k]={f:v[0],p:v[1],c:v[2],t:v[0]+v[1]+v[2]}});syncSeed();toast(`已匯入 ${n} 項`);render()}
-async function csv(){const r=[['位置','類別','品項','數量','單位','單價','小計','備註'],...S.items.filter(i=>i.qty).map(i=>[i.loc,CATS[i.cat],i.name,i.qty,i.unit,i.cost,tot(i),i.note||''])];
+async function csv(){const r=[['位置','類別','品項','進貨廠商','數量','單位','單價','小計','備註'],...S.items.filter(i=>i.qty).map(i=>[i.loc,CATS[i.cat],i.name,i.supplier||'',i.qty,i.unit,i.cost,tot(i),i.note||''])];
  const t='\ufeff'+r.map(x=>x.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
  try{const d=await claude.use('downloads');if(!d)throw 0;await d.save({filename:'庫存'+cur+'.csv',data:t});toast('已匯出')}catch(e){toast('此環境無法下載')}}
 document.addEventListener('click',e=>{
@@ -245,7 +246,7 @@ document.addEventListener('click',e=>{
  else if(a==='csv')csv();
  else if(a==='ec')$('#md').classList.remove('on');
  else if(a==='es'){const id=el.dataset.id,n=$('#e_n').value.trim();if(!n){toast('請輸入名稱');return}
-  const v={name:n,cat:$('#e_c').value,loc:$('#e_l').value,unit:$('#e_u').value.trim()||'個',cost:+$('#e_p').value||0,note:$('#e_o').value.trim(),freq:$('#e_q').value};
+  const v={name:n,cat:$('#e_c').value,loc:$('#e_l').value,unit:$('#e_u').value.trim()||'個',cost:+$('#e_p').value||0,note:$('#e_o').value.trim(),supplier:$('#e_s').value.trim(),freq:$('#e_q').value};
   let it;if(id){it=S.items.find(x=>x.id===id);Object.assign(it,v)}else{it={id:'n'+Date.now(),qty:0,...v};S.items.push(it)}
   syncItem(it);$('#md').classList.remove('on');render()}
  else if(a==='ed')arm(el,()=>{const did=el.dataset.id;S.items=S.items.filter(x=>x.id!==did);syncDel(did);$('#md').classList.remove('on');render()});
