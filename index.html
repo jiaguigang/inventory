@@ -42,6 +42,8 @@ input,select{font:inherit;color:var(--tx);background:var(--card);border:1px soli
 #md.on{display:flex}#md .sheet{background:var(--bg);width:100%;border-radius:20px 20px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:88%;overflow:auto}
 .f{margin-bottom:9px}.f label{font-size:12px;color:var(--mu)}.two{display:flex;gap:8px}.two>*{flex:1}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1f264f;color:#eef2f7;padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10}
+.sh{width:100%;border-collapse:collapse;font-size:14px;background:var(--card)}.sh th{font-size:11.5px;color:var(--mu);font-weight:600;text-align:right;padding:5px 6px;border-bottom:1px solid var(--bd)}.sh td{padding:8px 6px;border-bottom:1px solid var(--bd);text-align:right;vertical-align:middle}.sh th:first-child,.sh td:first-child{text-align:left}.sh td small{display:block;color:var(--mu);font-size:11px;font-weight:400}.sh tr.ok td:last-child small{color:var(--c);font-weight:600}.sh .pr,.prd{display:none}
+@media print{#tb,.noprint,#hd .big,#hd .mini,.logo,#toast{display:none!important}body{background:#fff;color:#000;padding-bottom:0}.sh,.sh td,.sh th{background:#fff;color:#000}.sh td,.sh th{border:1px solid #888}.sh .pr{display:table-cell;width:72px}.prd{display:block;margin:6px 0 10px;font-size:13px}.gh{break-after:avoid;color:#000}tr{break-inside:avoid}}
 .empty{text-align:center;color:var(--mu);padding:30px 10px}
 </style></head><body>
 <div id="hd"></div><div id="main"></div>
@@ -154,7 +156,7 @@ const nowKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMont
 const tot=i=>(+i.qty||0)*(+i.cost||0);
 const SB_URL='https://omtnacujgcfrgejkcyvy.supabase.co',SB_KEY='sb_publishable_UgmONJ6n5w1vippfobkhQA_yCCQJOTq';/* ← 填入 Supabase 的 Project URL 與 anon public key */
 const STAFF=location.hash==='#staff';
-let S={items:[],hist:{},log:{}},tab='count',q='',fl='全部',fc='全部',cur=nowKey(),fq=STAFF?'due':'all';
+let S={items:[],hist:{},log:{}},tab='count',q='',fl='全部',fc='全部',cur=nowKey(),fq=STAFF?'due':'all',sf='all';
 function sums(){const r={f:0,p:0,c:0,t:0,loc:{}};S.items.forEach(i=>{const v=tot(i);r[i.cat]=(r[i.cat]||0)+v;r.t+=v;r.loc[i.loc]=(r.loc[i.loc]||0)+v});return r}
 function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;clearTimeout(e._t);e._t=setTimeout(()=>e.style.opacity=0,1800)}
 const today=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -185,7 +187,7 @@ async function init(){
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
 }
 function header(){const s=sums();$('#hd').innerHTML=`<img class="logo" src="${LOGO}" alt=""><h1>${lab(cur)} 呷歸岡${STAFF?'現場盤點表':'庫存成本'}</h1><div class="big">${money(s.t)}</div><div class="mini">${cats().map(k=>`<span><i style="background:${col(k)}"></i>${esc(catName(k))} ${money(s[k]||0)}</span>`).join('')}</div>`}
-function tabs(){const T=[['count','📋','盤點'],['stats','📊','統計'],['items','🧺','品項'],['more','⚙️','更多']].filter(t=>!STAFF||t[0]==='count'||t[0]==='stats');$('#tb').innerHTML=T.map(t=>`<button class="${tab===t[0]?'on':''}" data-t="${t[0]}"><b>${t[1]}</b>${t[2]}</button>`).join('')}
+function tabs(){const T=[['count','📋','盤點'],['sheet','📑','庫存表'],['stats','📊','統計'],['items','🧺','品項'],['more','⚙️','更多']].filter(t=>!STAFF||['count','sheet','stats'].includes(t[0]));$('#tb').innerHTML=T.map(t=>`<button class="${tab===t[0]?'on':''}" data-t="${t[0]}"><b>${t[1]}</b>${t[2]}</button>`).join('')}
 function rows(){
  const a=S.items.filter(i=>(fq==='all'||!done(i))&&(fl==='全部'||i.loc===fl)&&(fc==='全部'||i.cat===fc)&&(!q||i.name.includes(q)||(i.supplier||'').includes(q)));
  if(!a.length)return '<div class="empty">'+(fq==='due'&&!q?'🎉 都盤完了':'沒有符合的品項')+'</div>';
@@ -212,6 +214,17 @@ function vStats(){
  <div class="card"><h2>各區域</h2>${locs.length?locs.map(l=>bar(l[0],l[1],s.t,'var(--ac)')).join(''):'<div class="empty">尚未盤點</div>'}</div>
  <div class="card"><h2>歷月趨勢（食材／包材／清潔）</h2><div class="hist">${all.map(([k,h])=>{const o=Math.max(0,h.t-h.f-h.p-h.c),nb=!h.p&&!h.c&&o<1;const sc=v=>(v/mx*100)+'%';return `<div class="col"><div class="stack" style="${h.live?'opacity:.55':''}"><i style="height:${sc(h.f)};background:${nb?'var(--g)':COL.f}"></i><i style="height:${sc(h.p)};background:${COL.p}"></i><i style="height:${sc(h.c)};background:${COL.c}"></i><i style="height:${sc(o)};background:#8a8fa8"></i></div>${(h.t/10000).toFixed(1)}萬<br>${k.slice(2).replace('-','/')}</div>`}).join('')}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">灰色＝當時未分類或其他類別；半透明＝本月進行中</div></div>
  ${usageCard()}<div class="card"><h2>成本最高的 10 項</h2>${top.length?top.map(i=>bar(i.name,tot(i),s.t,col(i.cat))).join(''):'<div class="empty">尚未盤點</div>'}</div>`}
+const sheetItems=()=>S.items.filter(i=>sf==='all'||(i.freq||'m')===sf);
+const prevOf=i=>{const l=S.log[i.id]||[];return i.counted?l[l.length-2]:l[l.length-1]};
+const FQ={d:'每日',w:'每週',m:'每月'};
+function vSheet(){
+ if(!S.items.length)return '<div class="empty">尚無品項</div>';
+ const a=sheetItems(),locs=[...LOCS.filter(l=>S.items.some(i=>i.loc===l)),...[...new Set(S.items.map(i=>i.loc))].filter(l=>!LOCS.includes(l))];
+ const n=k=>S.items.filter(i=>k==='all'||(i.freq||'m')===k).length;
+ const body=locs.map(l=>{const g=a.filter(i=>i.loc===l);return g.length?`<div class="gh">${esc(l)}（${g.length}）</div><table class="sh"><tr><th>品項</th><th>前次盤點</th><th>現有庫存</th><th>最後盤點</th><th class="pr">實盤</th></tr>${g.map(i=>{const p=prevOf(i);return `<tr class="${done(i)?'ok':''}"><td><b>${esc(i.name)}</b><small>${FQ[i.freq||'m']} · ${esc(i.unit)}${i.supplier?' · '+esc(i.supplier):''}</small></td><td>${p?p.q:'—'}<small>${p?p.d.slice(5):''}</small></td><td><b>${i.qty||0}</b></td><td>${i.counted?i.counted.slice(5):'—'}<small>${done(i)?'✓ 已盤':'待盤'}</small></td><td class="pr"></td></tr>`}).join('')}</table>`:''}).join('');
+ return `<div class="noprint"><div class="chips">${[['all','全部'],['d','每日'],['w','每週'],['m','每月']].map(([k,t])=>`<button class="chip ${sf===k?'on':''}" data-a="sf" data-v="${k}">${t} ${n(k)}</button>`).join('')}</div>
+ <div class="two" style="margin:4px 0 8px"><button class="btn alt" data-a="pr" style="margin:0">列印／存成 PDF</button><button class="btn alt" data-a="csv2" style="margin:0">匯出 CSV</button></div></div>
+ <div class="prd">列印日期：${today()}　盤點人：＿＿＿＿＿＿　（${sf==='all'?'全部品項':FQ[sf]+'盤點'}）</div>${body||'<div class="empty">沒有符合的品項</div>'}`}
 function vItems(){return `<button class="btn" data-a="new">＋ 新增品項</button>`+S.items.map(i=>`<div class="row" data-id="${i.id}" data-a="e"><div class="nm"><b>${esc(i.name)}</b><small>${esc(catName(i.cat))} · ${esc(i.loc)} · ${m1(i.cost)}/${esc(i.unit)}${i.supplier?' · '+esc(i.supplier):''}</small></div><div class="rt">›</div></div>`).join('')}
 function vMore(){const ks=Object.keys(S.hist).sort().reverse();return `<div class="card"><h2>月底作業</h2><div class="f"><label>盤點月份</label><input type="month" id="mm" value="${cur}"></div>
  <button class="btn" data-a="arch">封存這個月的結果</button>
@@ -220,7 +233,7 @@ function vMore(){const ks=Object.keys(S.hist).sort().reverse();return `<div clas
  <div style="font-size:12px;color:var(--mu)">${online()?'已連線雲端資料庫，現場與你的手機共用同一份資料。':'尚未設定雲端資料庫，目前只存在這支手機。'}</div></div>
  <div class="card"><h2>現場人員專用連結</h2><div style="font-size:13px;word-break:break-all">${esc(location.href.split('#')[0])}#staff</div><div style="font-size:12px;color:var(--mu);margin-top:6px">可以盤點，也能新增品項、類別與位置，但不能修改或刪除既有品項、封存或清空數量。</div></div>
  <div class="card"><h2>已封存月份</h2>${ks.length?ks.map(k=>`<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${lab(k)}</span><b>${money(S.hist[k].t)}</b></div>`).join(''):'<div class="empty">還沒有</div>'}</div>`}
-function render(){header();tabs();$('#main').innerHTML={count:vCount,stats:vStats,items:vItems,more:vMore}[tab]()}
+function render(){header();tabs();$('#main').innerHTML={count:vCount,sheet:vSheet,stats:vStats,items:vItems,more:vMore}[tab]()}
 function upd(row){const i=S.items.find(x=>x.id===row.dataset.id);if(!STAFF)row.querySelector('.rt').textContent=money(tot(i));markDone(i);row.classList.add('ok');header();saveQty(i)}
 function setQty(row,v){const i=S.items.find(x=>x.id===row.dataset.id);i.qty=Math.max(0,Math.round(v*100)/100);row.querySelector('input').value=i.qty||'';upd(row)}
 function arm(b,fn){if(b._a){fn();return}b._a=1;const t=b.textContent;b.textContent='再按一次確認';setTimeout(()=>{b._a=0;b.textContent=t},3000)}
@@ -238,7 +251,10 @@ function seed(){let n=0;const have=new Set(S.items.map(i=>i.name));SEED.split('\
  Object.entries(HIST).forEach(([k,v])=>{if(!S.hist[k])S.hist[k]={f:v[0],p:v[1],c:v[2],t:v[0]+v[1]+v[2]}});syncSeed();toast(`已匯入 ${n} 項`);render()}
 async function csv(){const r=[['位置','類別','品項','進貨廠商','數量','單位','單價','小計','備註'],...S.items.filter(i=>i.qty).map(i=>[i.loc,catName(i.cat),i.name,i.supplier||'',i.qty,i.unit,i.cost,tot(i),i.note||''])];
  const t='\ufeff'+r.map(x=>x.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
- try{const d=await claude.use('downloads');if(!d)throw 0;await d.save({filename:'庫存'+cur+'.csv',data:t});toast('已匯出')}catch(e){toast('此環境無法下載')}}
+ dl('庫存'+cur+'.csv',t)}
+function dl(name,t){const u=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);toast('已匯出')}
+function sheetCsv(){const r=[['位置','類別','品項','進貨廠商','盤點頻率','單位','前次盤點日','前次數量','現有庫存','最後盤點日'],...sheetItems().map(i=>{const p=prevOf(i);return [i.loc,catName(i.cat),i.name,i.supplier||'',FQ[i.freq||'m'],i.unit,p?p.d:'',p?p.q:'',i.qty||0,i.counted||'']})];
+ dl('庫存表'+today()+'.csv','\ufeff'+r.map(x=>x.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n'))}
 document.addEventListener('click',e=>{
  const tb=e.target.closest('[data-t]');if(tb){tab=tb.dataset.t;render();scrollTo(0,0);return}
  const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,row=el.closest('.row');
@@ -249,6 +265,9 @@ document.addEventListener('click',e=>{
  else if(a==='fq'){fq=el.dataset.v;render()}
  else if(a==='ok'){const i=S.items.find(x=>x.id===row.dataset.id);markDone(i);row.classList.add('ok');saveQty(i);header()}
  else if(a==='fl'){fl=el.dataset.v;render()}else if(a==='fc'){fc=el.dataset.v;render()}
+ else if(a==='sf'){sf=el.dataset.v;render()}
+ else if(a==='pr')window.print();
+ else if(a==='csv2')sheetCsv();
  else if(a==='pull')pull(true);
  else if(a==='seed')seed();
  else if(a==='csv')csv();
