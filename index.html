@@ -169,7 +169,7 @@ const toRow=(i,k)=>({id:i.id,name:i.name,cat:i.cat,loc:i.loc,unit:i.unit,cost:i.
 const cache=()=>{try{localStorage.setItem('inv',JSON.stringify(S))}catch(e){}};
 const run=async fn=>{if(!online())return;try{await fn()}catch(e){toast('同步失敗，請確認網路')}};
 const qt={},pt={};
-function saveQty(i){cache();if(!online())return;clearTimeout(qt[i.id]);qt[i.id]=setTimeout(async()=>{try{await sb('inv_items?id=eq.'+encodeURIComponent(i.id),{method:'PATCH',body:JSON.stringify({qty:i.qty,counted:i.counted,chk:i.chk||null})});if(i.counted)await sb('inv_log',{method:'POST',body:JSON.stringify([{day:i.counted,item_id:i.id,qty:i.qty}])})}catch(e){toast('同步失敗，請確認網路')}delete qt[i.id]},500)}
+function saveQty(i){cache();if(!online())return;clearTimeout(qt[i.id]);qt[i.id]=setTimeout(async()=>{try{await sb('inv_items?id=eq.'+encodeURIComponent(i.id),{method:'PATCH',body:JSON.stringify({qty:i.qty,counted:i.counted,chk:i.chk||null})});if(done(i))await sb('inv_log',{method:'POST',body:JSON.stringify([{day:i.counted,item_id:i.id,qty:i.qty}])})}catch(e){toast('同步失敗，請確認網路')}delete qt[i.id]},500)}
 const syncItem=i=>{cache();run(()=>sb('inv_items',{method:'POST',body:JSON.stringify([toRow(i,S.items.indexOf(i))])}))};
 const syncDel=id=>{cache();run(()=>sb('inv_items?id=eq.'+encodeURIComponent(id),{method:'DELETE'}))};
 const syncHist=k=>{cache();run(()=>sb('inv_hist',{method:'POST',body:JSON.stringify([{month:k,data:S.hist[k]}])}))};
@@ -329,7 +329,7 @@ function vMore(){const ks=Object.keys(S.hist).sort().reverse();return `<div clas
  <div class="card"><h2>現場人員專用連結</h2><div style="font-size:13px;word-break:break-all">${esc(location.href.split('#')[0])}#staff</div><div style="font-size:12px;color:var(--mu);margin-top:6px">可以盤點，也能新增品項、類別與位置，但不能修改或刪除既有品項、封存或清空數量。</div></div>
  <div class="card"><h2>已封存月份</h2>${ks.length?ks.map(k=>`<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${lab(k)}</span><b>${money(S.hist[k].t)}</b></div>`).join(''):'<div class="empty">還沒有</div>'}</div>`}
 function render(){header();tabs();$('#main').innerHTML={count:vCount,sheet:vSheet,order:vOrder,price:vPrice,stats:vStats,items:vItems,more:vMore}[tab]()}
-function upd(row){const i=S.items.find(x=>x.id===row.dataset.id);if(!STAFF)row.querySelector('.rt').textContent=money(tot(i));markDone(i);row.classList.add('ok');header();saveQty(i)}
+function upd(row){const i=S.items.find(x=>x.id===row.dataset.id);if(!STAFF)row.querySelector('.rt').textContent=money(tot(i));i.chk=today();if(done(i)){const e=(S.log[i.id]||[]).find(x=>x.d===i.counted);if(e)e.q=i.qty}header();saveQty(i)}
 function setQty(row,v){const i=S.items.find(x=>x.id===row.dataset.id);i.qty=Math.max(0,Math.round(v*100)/100);row.querySelector('input').value=i.qty||'';upd(row)}
 function arm(b,fn){if(b._a){fn();return}b._a=1;const t=b.textContent;b.textContent='再按一次確認';setTimeout(()=>{b._a=0;b.textContent=t},3000)}
 function edit(id){const i=S.items.find(x=>x.id===id)||{cat:'f',loc:'煎台',unit:'包',cost:0,freq:'m'};const ls=[...new Set([...LOCS,...S.items.map(x=>x.loc)])];
